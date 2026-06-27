@@ -5,6 +5,7 @@ La parte de la jugabilidad del akinator/Adivina en qué estoy pensando
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 from typing import Optional
+import os
 import Proyecto_Adivina as PA  
 
 #Permite guardar el árbol en un archivo .json
@@ -23,7 +24,7 @@ def guardar_arbol_archivo(tree:PA.Arbol):
 
 
 
-def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
+def jugar_arbol(tree:PA.Arbol, ventana, source_path: Optional[str] =None):
     #Source_path es para tener un acceso directo al archivo para sobrescribirlo, en caso de que este no sea None
     #Verificar que el tree sea una instancia de PA:Arbol 
     if tree is None or tree.raiz is None:
@@ -65,7 +66,7 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
         nodo: Optional[PA.Nodo_desicion] = state["nodo_actual"]
         if nodo is None:
             pregunta_var.set("Árbol vacío.")
-            b_sí.config(state=tk.DISABLED)
+            b_si.config(state=tk.DISABLED)
             b_no.config(state=tk.DISABLED)
             return
 
@@ -78,11 +79,12 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
     def definir_rama_vacía(nodo: PA.Nodo_desicion, branch="sí"):
         #Por si un nodo se queda sin respuesta o info en general, entonces permitir definir la respuesta del nodo
         texto = simpledialog.askstring("Definir rama", f"Ingrese la respuesta (texto) para la rama '{branch}':")
-        if not texto:
+        if not texto or not texto.strip():
+            messagebox.showwarning("Entrada vacía", "Debe ingresar texto no vacío para crear la rama.")
             return
         nuevo_nodo = PA.Nodo_desicion(texto, es_pregunta=False)
         if branch == "sí":
-            nodo.sí = nuevo_nodo
+            nodo.si = nuevo_nodo
         else:
             nodo.no = nuevo_nodo
         # intentar guardar automáticamente
@@ -99,12 +101,12 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
             messagebox.showinfo("¡Le he atinado!", "¡Genial! Adiviné correctamente :D.")
             preguntar_reiniciar()
         # Comprobación explícita antes de asignar
-        if nodo.sí is None:
+        if nodo.si is None:
             # Ofrecer crear la rama en ese momento (evita None assignment)
             if messagebox.askyesno("Rama faltante", "La rama 'si' no está definida. ¿Deseas crearla ahora?"):
                 definir_rama_vacía(nodo, "si")
             return
-        state["nodo_actual"] = nodo.sí
+        state["nodo_actual"] = nodo.si
         actualizar_vista()
     
 
@@ -134,26 +136,28 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
     def aprender(nodo_hoja: PA.Nodo_desicion):
         # Pedir respuesta correcta y pregunta que distinga
         respuesta_correcta = simpledialog.askstring("Enseñar", "No adiviné D,: ¿En qué pensabas?")
-        if not respuesta_correcta:
+        if not respuesta_correcta or not respuesta_correcta.strip():
+            messagebox.showwarning("Entrada vacía", "Debe escribir la respuesta correcta para que aprenda.")
             return
         pregunta_dist = simpledialog.askstring("Enseñar", f"Proporcione una pregunta de sí/no que permita distinguir '{respuesta_correcta}' de '{nodo_hoja.value}':")
-        if not pregunta_dist:
+        if not pregunta_dist or not pregunta_dist.strip():
+            messagebox.showwarning("Entrada vacía", "Debe escribir una pregunta válida para que el sistema aprenda.")
             return
         # Preguntar si la respuesta correcta corresponde a 'sí' ante la nueva pregunta
         si_es_nuevo = messagebox.askyesno("Enseñar", f"Para la pregunta:\n'{pregunta_dist}'\n¿la respuesta 'sí' corresponde a '{respuesta_correcta}'? (Sí -> {respuesta_correcta})")
 
         # Crear nuevos nodos
-        nuevo_nodo_respuesta = PA.Nodo_desicion(respuesta_correcta, es_pregunta=False)
+        nuevo_nodo_respuesta = PA.Nodo_desicion(respuesta_correcta.strip(), es_pregunta=False)
         viejo_nodo_respuesta = PA.Nodo_desicion(nodo_hoja.value, es_pregunta=False)
 
         # Actualizar el nodo actual in-place (reemplaza hoja por pregunta)
         nodo_hoja.es_pregunta = True
-        nodo_hoja.value = pregunta_dist
+        nodo_hoja.value = pregunta_dist.strip()
         if si_es_nuevo:
-            nodo_hoja.sí = nuevo_nodo_respuesta
+            nodo_hoja.si = nuevo_nodo_respuesta
             nodo_hoja.no = viejo_nodo_respuesta
         else:
-            nodo_hoja.sí = viejo_nodo_respuesta
+            nodo_hoja.si = viejo_nodo_respuesta
             nodo_hoja.no = nuevo_nodo_respuesta
         
         # Guardado automático silencioso
@@ -163,8 +167,8 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
         actualizar_vista()
 
     # Botones Sí / No
-    b_sí =tk.Button(botones_frame, text="Sí", width=12, bg="#11DB18", font=("Times New Roman", 14, "bold"), command=accion_sí)
-    b_sí.grid(row=0, column=0, padx=20)
+    b_si =tk.Button(botones_frame, text="Sí", width=12, bg="#11DB18", font=("Times New Roman", 14, "bold"), command=accion_sí)
+    b_si.grid(row=0, column=0, padx=20)
     b_no=tk.Button(botones_frame, text="No", width=12, bg="#f73434", font=("Times New Roman", 14, "bold"), command=accion_no)
     b_no.grid(row=0, column=1, padx=20)
 
@@ -172,7 +176,8 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
     extras_frame = tk.Frame(frame, bg="#1ac6b8")
     extras_frame.pack(pady=8)
 
-    tk.Button(extras_frame, text="Volver al inicio", command=lambda: [state.update({"nodo_actual": tree.raiz}), actualizar_vista()], bg="#E61F93").pack(side=tk.LEFT, padx=6)
+    tk.Button(extras_frame, text="Volver al inicio", command=lambda: [state.update({"nodo_actual": tree.raiz}), actualizar_vista()]).pack(side=tk.LEFT, padx=6)
+    tk.Button(extras_frame, text="Guardar como...", command=lambda: guardar_arbol_archivo(tree)).pack(side=tk.LEFT, padx=6)
 
     # Handler para cerrar la ventana (guardar automáticamente si se puede)
     def on_close():

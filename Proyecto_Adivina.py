@@ -1,15 +1,17 @@
 
-'''
+"""
 Proyecto III de Taller a la programación
 "Adivina en qué estoy pensando"
 José Antonio Azofeifa Ugalde
 2026083609
-'''
+"""
 
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import json
 import os
+import shutil
+from typing import Optional, Dict, Any
 
 '''
 Clases
@@ -19,35 +21,48 @@ class Nodo_desicion:
     def __init__(self, value="", es_pregunta=True, sí=None, no=None):
         self.value=value     #para la pregunta o la respuesta
         self.es_pregunta=es_pregunta
-        self.sí=sí
+        self.si=sí
         self.no=no
     
     def es_hoja(self):  #Verifica si es hoja o nodo
         return not self.es_pregunta
     
-    def para_diccio(self):   #Transforma el nodo en un diccionario para .json
+    def para_diccio(self)-> Dict[str, Any]:   #Transforma el nodo en un diccionario para .json
         if self.es_pregunta:
             return {"Pregunta": self.value,
-                    "sí": self.sí.para_diccio() if self.sí else None,
+                    "si": self.si.para_diccio() if self.si else None,
                     "no": self.no.pra_diccio() if self.no else None}
         else:
             return {"Respuesta": self.value}
     
     @classmethod
-    def from_diccio(cls,diccio):   #pasa de diccionario a un Nodo_desicion
+    def from_diccio(cls, diccio: Optional[Dict[str, Any]]) -> Optional['Nodo_desicion']:   #pasa de diccionario a un Nodo_desicion
         if diccio is None:
             return None
+        if not isinstance(diccio, dict):
+            raise ValueError("Nodo inválido: no es un dict: " + repr(diccio))
+
+        # Hoja
         if "Respuesta" in diccio:
             return cls(diccio["Respuesta"], es_pregunta=False)
-        elif "Pregunta" in diccio:
-            sí_key = diccio.get("si", diccio.get("sí"))
-            no_key = diccio.get("no", diccio.get("no"))  # 'no' casi siempre igual
-            nodo_sí = cls.from_diccio(sí_key)
+        # Pregunta
+        if "Pregunta" in diccio:
+            # Normalizar variantes de clave 'si'
+            si_key = None
+            for k in ("si", "sí", "Si", "SÍ", "SI"):
+                if k in diccio:
+                    si_key = diccio[k]
+                    break
+            no_key = None
+            for k in ("no", "No", "NO"):
+                if k in diccio:
+                    no_key = diccio[k]
+                    break
+            nodo_si = cls.from_diccio(si_key)
             nodo_no = cls.from_diccio(no_key)
-            return cls(diccio["Pregunta"], es_pregunta=True, sí=nodo_sí, no=nodo_no)
-        else:
-            # Lanzar excepción para que el cargador lo detecte
-            raise ValueError("Formato de nodo desconocido: " + repr(diccio))
+            return cls(diccio["Pregunta"], es_pregunta=True, sí=nodo_si, no=nodo_no)
+
+        raise ValueError("Formato de nodo desconocido: " + repr(diccio))
 
 #Clase para los árboles como tal
 class Arbol:
@@ -81,19 +96,43 @@ class Arbol:
         return arbol
 
     @classmethod
-    def cargar_json(cls, filepath):
+    def cargar_json(cls, filepath: str) -> 'Arbol':
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(filepath)
         #carga el árbol como diccionario de .json y lo transforma en un arbol que el resto del código puede manejar
         with open(filepath, "r", encoding="utf-8") as f:
             datos = json.load(f)
         root = Nodo_desicion.from_diccio(datos)
-        if root==None:
+        if root is None:
             raise ValueError("El JSON no contiene un nodo raíz válido.")
         return cls(root)
 
-    def guardar_json(self, filepath):        #guarda la última versión del árbol en un archivo .json
+    def guardar_json(self, filepath: str) -> None:        #guarda la última versión del árbol en un archivo .json
+        # asegurarse de que el dict de la raíz es serializable
+        data = self.raiz.para_diccio()
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(self.raiz.para_diccio(), f, ensure_ascii=False, indent=4)
+            json.dump(data, f, ensure_ascii=False, indent=4)
     
+    def guardar_con_backup(self, filepath: str) -> None:
+        #Guarda con copia de seguridad: si existe filepath, crea filepath + '.bak'
+        #antes de sobrescribir. Si algo falla,se intenta dejar el original intacto.
+        try:
+            if os.path.exists(filepath):
+                bak = filepath + ".bak"
+                shutil.copy2(filepath, bak)
+            # Escribir en un archivo temporal y moverlo (para mayor seguridad)
+            tmp = filepath + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.raiz.para_diccio(), f, ensure_ascii=False, indent=4)
+            os.replace(tmp, filepath)
+        except Exception:
+            # Si falla, intentar eliminar el tmp si existe y re-lanzar para que el caller maneje o ignore.
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            except Exception:
+                pass
+            raise
 
 '''
 GUI
@@ -102,7 +141,7 @@ class Ventana:
     def __init__(self):
         self.Menu=tk.Tk()
         #mantiene la ruta del archivo actual del árbol (puede ser arbol_default.json u otro seleccionado)
-        self.current_filepath = None
+        self.current_filepath: Optional[str] = None
         #intenta cargar el archivo por defecto si existe, sino crear uno en memoria.
         default_path = "arbol_default.json"
         if os.path.exists(default_path):
@@ -165,16 +204,18 @@ class Ventana:
                 messagebox.showerror("ERROR","El archivo no contiene un árbol válido.")
                 return
             self.tree = tree
+            self.current_filepath = filepath
             messagebox.showinfo("CARGADO", f"Árbol cargado correctamente desde:\n{filepath}")
         except Exception as e:
-            # En caso de fallo, mostrar mensaje y ofrecer seguir con árbol por defecto
+            #En caso de fallo, mostrar mensaje y ofrecer seguir con árbol por defecto
             messagebox.showerror("ERROR", f"No se pudo cargar: {e}\nSe usará el árbol por defecto.")
             self.tree = Arbol.arbol_default()
+            #current_filepath se mantiene igual o None
     
     def empezar_juego(self):
         try:
             import Akinator_jugar
-            # Pasamos el árbol (objeto Arbol), la ventana y la ruta actual del archivo (puede ser None)
+            #Pasamos el árbol (objeto Arbol), la ventana y la ruta actual del archivo (puede ser None)
             if hasattr(Akinator_jugar, "jugar_arbol"):
                 Akinator_jugar.jugar_arbol(self.tree, self.Menu, self.current_filepath)
             else:
