@@ -1,0 +1,18 @@
+{"Pregunta": "¿Se juega normalmente en equipo?",
+  "si": {"Pregunta": "¿Se utiliza una pelota?",
+        "si": {"Pregunta": "¿Se juega principalmente con los pies?",
+              "si": {"Respuesta": "Fútbol"},
+              "no": {"Pregunta": "¿Se encesta la pelota?",
+                    "si": {"Respuesta": "Baloncesto"},
+                    "no": {"Respuesta": "Voleibol"}}},
+        "no": {"Pregunta": "¿Se juega sobre hielo?",
+                "si": {"Respuesta": "Hockey sobre hielo"},
+                "no": {"Respuesta": "Remo"}}},
+  "no": {"Pregunta": "¿Se practica en el agua?",
+        "si": {"Respuesta": "Natación"},
+        "no": {"Pregunta": "¿Se usa una raqueta?",
+              "si": {"Pregunta": "¿Tiene red en el centro del campo?",
+                    "si": {"Respuesta": "Tenis"},
+                    "no": {"Respuesta": "Bádminton"}},
+              "no": {"Respuesta": "Atletismo"}}}
+}

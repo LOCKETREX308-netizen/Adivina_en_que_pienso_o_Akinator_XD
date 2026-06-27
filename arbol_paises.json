@@ -1,0 +1,18 @@
+{"Pregunta": "¿Está en América?",
+  "si": {"Pregunta": "¿Su idioma principal es el español?",
+        "si": {"Pregunta": "¿Tiene salida al Caribe?",
+              "si": {"Respuesta": "Costa Rica"},
+              "no": {"Respuesta": "Chile"}},
+        "no": {"Pregunta": "¿Está en Norteamérica?",
+              "si": {"Respuesta": "Canadá"},
+              "no": {"Respuesta": "Brasil"}}},
+  "no": {"Pregunta": "¿Está en Europa?",
+        "si": {"Pregunta": "¿Usa el euro?",
+              "si": {"Respuesta": "España"},
+              "no": {"Respuesta": "Reino Unido"}},
+        "no": {"Pregunta": "¿Está en Asia?",
+              "si": {"Pregunta": "¿Es un archipiélago?",
+                    "si": {"Respuesta": "Japón"},
+                    "no": {"Respuesta": "China"}},
+              "no": {"Respuesta": "Australia"}}}
+}
