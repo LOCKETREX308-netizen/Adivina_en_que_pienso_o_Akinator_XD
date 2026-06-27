@@ -1,0 +1,13 @@
+{
+  "Pregunta": "¿Tiene cuatro extremidades? (Alas y aletas cuentan)",
+  "si": {
+    "Pregunta": "¿Camina?",
+    "si": { "Respuesta": "Perro" },
+    "no": { "Respuesta": "Pájaro" }
+  },
+  "no": {
+    "Pregunta": "¿Vuela?",
+    "si": { "Respuesta": "Abeja" },
+    "no": { "Respuesta": "Serpiente" }
+  }
+}
