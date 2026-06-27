@@ -40,8 +40,10 @@ class Nodo_desicion:
         if "Respuesta" in diccio:
             return cls(diccio["Respuesta"], es_pregunta=False)
         elif "Pregunta" in diccio:
-            nodo_sí=cls.from_diccio(diccio.get("sí"))
-            nodo_no=cls.from_diccio(diccio.get("no"))
+            sí_key = diccio.get("si", diccio.get("sí"))
+            no_key = diccio.get("no", diccio.get("no"))  # 'no' casi siempre igual
+            nodo_sí = cls.from_diccio(sí_key)
+            nodo_no = cls.from_diccio(no_key)
             return cls(diccio["Pregunta"], es_pregunta=True, sí=nodo_sí, no=nodo_no)
         else:
             # Lanzar excepción para que el cargador lo detecte
@@ -101,7 +103,7 @@ class Ventana:
         self.Menu=tk.Tk()
         #mantiene la ruta del archivo actual del árbol (puede ser arbol_default.json u otro seleccionado)
         self.current_filepath = None
-        #intentar cargar el archivo por defecto si existe, sino crear uno en memoria.
+        #intenta cargar el archivo por defecto si existe, sino crear uno en memoria.
         default_path = "arbol_default.json"
         if os.path.exists(default_path):
             try:

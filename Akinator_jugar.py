@@ -4,12 +4,13 @@ La parte de la jugabilidad del akinator/Adivina en qué estoy pensando
 '''
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
+from typing import Optional
 import Proyecto_Adivina as PA  
 
 #Permite guardar el árbol en un archivo .json
 def guardar_arbol_archivo(tree:PA.Arbol):
     filepath = filedialog.asksaveasfilename(
-        title=f"Guardar árbol",
+        title="Guardar árbol",
         defaultextension=".json",
         filetypes=[("JSON files", "*.json")]
     )
@@ -50,8 +51,18 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
     botones_frame = tk.Frame(frame, bg="#1ac6b8")
     botones_frame.pack(pady=10)
 
+    def intentar_guardado_automatico():
+        #Si se conoce la ruta source_path, le daremos uso para sobrescribir en el archivo del árbol
+        if source_path:
+            try:
+                tree.guardar_json(source_path)
+                #No mostramos popup (guardado silencioso)
+            except Exception:
+                #Si no se logra guardar
+                pass
+
     def actualizar_vista():
-        nodo = state["nodo_actual"]
+        nodo: Optional[PA.Nodo_desicion] = state["nodo_actual"]
         if nodo is None:
             pregunta_var.set("Árbol vacío.")
             b_sí.config(state=tk.DISABLED)
@@ -63,35 +74,53 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
             pregunta_var.set(f"¿Estás pensando en: {nodo.value}?")
         else:
             pregunta_var.set(nodo.value)
+    
+    def definir_rama_vacía(nodo: PA.Nodo_desicion, branch="sí"):
+        #Por si un nodo se queda sin respuesta o info en general, entonces permitir definir la respuesta del nodo
+        texto = simpledialog.askstring("Definir rama", f"Ingrese la respuesta (texto) para la rama '{branch}':")
+        if not texto:
+            return
+        nuevo_nodo = PA.Nodo_desicion(texto, es_pregunta=False)
+        if branch == "sí":
+            nodo.sí = nuevo_nodo
+        else:
+            nodo.no = nuevo_nodo
+        # intentar guardar automáticamente
+        intentar_guardado_automatico()
+        messagebox.showinfo("Definido", f"Se creó la rama '{branch}' con '{texto}'.")
+        # no cambiamos nodo actual; el usuario puede seguir desde aquí
 
     def accion_sí():
-        nodo = state["nodo_actual"]
+        nodo: Optional[PA.Nodo_desicion] = state["nodo_actual"]
         if nodo is None:
             return
         if nodo.es_hoja():
             # Si la suposición fue correcta
             messagebox.showinfo("¡Le he atinado!", "¡Genial! Adiviné correctamente :D.")
             preguntar_reiniciar()
-        else:
-            if nodo.sí is None:
-                messagebox.showwarning("Datos incompletos", "La rama 'sí' no está definida en este nodo.")
-                return
-            state["nodo_actual"] = nodo.sí
-            actualizar_vista()
+        # Comprobación explícita antes de asignar
+        if nodo.sí is None:
+            # Ofrecer crear la rama en ese momento (evita None assignment)
+            if messagebox.askyesno("Rama faltante", "La rama 'si' no está definida. ¿Deseas crearla ahora?"):
+                definir_rama_vacía(nodo, "si")
+            return
+        state["nodo_actual"] = nodo.sí
+        actualizar_vista()
+    
 
     def accion_no():
-        nodo = state["nodo_actual"]
+        nodo: Optional[PA.Nodo_desicion] = state["nodo_actual"]
         if nodo is None:
             return
         if nodo.es_hoja():
             # Suposición incorrecta: aprender
             aprender(nodo)
-        else:
-            if nodo.no is None:
-                messagebox.showwarning("Datos incompletos", "La rama 'no' no está definida en este nodo.")
-                return
-            state["nodo_actual"] = nodo.no
-            actualizar_vista()
+        if nodo.no is None:
+            if messagebox.askyesno("Rama faltante", "La rama 'no' no está definida. ¿Deseas crearla ahora?"):
+                definir_rama_vacía(nodo, "no")
+            return
+        state["nodo_actual"] = nodo.no
+        actualizar_vista()
 
     def preguntar_reiniciar():
         # Preguntar si quiere jugar otra vez (volviendo a la raíz)
@@ -99,19 +128,10 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
             state["nodo_actual"] = tree.raiz
             actualizar_vista()
         else:
+            intentar_guardado_automatico()
             juego.destroy()
     
-    def intentar_guardado_automatico():
-        #Si se conoce la ruta source_path, le daremos uso para sobrescribir en el archivo del árbol
-        if source_path:
-            try:
-                tree.guardar_json(source_path)
-                #No mostramos popup (guardado silencioso)
-            except Exception:
-                #Si no se logra guardar
-                pass
-    
-    def aprender(nodo_hoja):
+    def aprender(nodo_hoja: PA.Nodo_desicion):
         # Pedir respuesta correcta y pregunta que distinga
         respuesta_correcta = simpledialog.askstring("Enseñar", "No adiviné D,: ¿En qué pensabas?")
         if not respuesta_correcta:
@@ -130,27 +150,20 @@ def jugar_arbol(tree:PA.Arbol, ventana, source_path=None):
         nodo_hoja.es_pregunta = True
         nodo_hoja.value = pregunta_dist
         if si_es_nuevo:
-            nodo_hoja.si = nuevo_nodo_respuesta
+            nodo_hoja.sí = nuevo_nodo_respuesta
             nodo_hoja.no = viejo_nodo_respuesta
         else:
-            nodo_hoja.si = viejo_nodo_respuesta
+            nodo_hoja.sí = viejo_nodo_respuesta
             nodo_hoja.no = nuevo_nodo_respuesta
         
-        #intentamos guardar automáticamente en source_path si está definido
-        if source_path:
-            try:
-                tree.guardar_json(source_path)
-            except Exception:
-                # Ignorar fallos de escritura; continuar sin molestar al usuario
-                pass
-        
-        messagebox.showinfo("Aprendido", "Gracias — he aprendido algo nuevo.")
-        # Reiniciar a la raíz para jugar de nuevo
+        # Guardado automático silencioso
+        intentar_guardado_automatico()
+        messagebox.showinfo("Aprendido", "¡Gracias! — he aprendido algo nuevo :D")
         state["nodo_actual"] = tree.raiz
         actualizar_vista()
 
     # Botones Sí / No
-    b_sí= tk.Button(botones_frame, text="Sí", width=12, bg="#11DB18", font=("Times New Roman", 14, "bold"), command=accion_sí)
+    b_sí =tk.Button(botones_frame, text="Sí", width=12, bg="#11DB18", font=("Times New Roman", 14, "bold"), command=accion_sí)
     b_sí.grid(row=0, column=0, padx=20)
     b_no=tk.Button(botones_frame, text="No", width=12, bg="#f73434", font=("Times New Roman", 14, "bold"), command=accion_no)
     b_no.grid(row=0, column=1, padx=20)
