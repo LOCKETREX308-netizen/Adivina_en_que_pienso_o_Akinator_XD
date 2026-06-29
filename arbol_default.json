@@ -1,22 +1,69 @@
 {
-  "Pregunta": "¿Tiene cuatro extremidades? (Alas y aletas cuentan)",
-  "si": {"Pregunta": "¿Camina principalmente?",
-        "si": { "Pregunta": "¿Es mamífero?",
-                "si": {"Respuesta": "Perro" },
-                "no": {"Respuesta": "Salamandra"}},
-        "no": { "Pregunta": "¿Es mamífero?",
-                "Si": {"Respuesta":"Murciélago"},
-                "no": {"Pregunta":"¿Vuela?",
-                        "si":{"Respuesta": "Pájaro"},
-                        "no":{"Respuesta": "Sapo"}}}},
-  "no": {
-    "Pregunta": "¿Es un insecto?",
-    "si": { "Pregunta": "¿Vuela?",
-            "si": {"Respuesta": "Abeja" },
-            "no": {"Respuesta": "Hormiga" }},
-    "no": {"Pregunta": "¿Nada?",
-            "Si": {"Respuesta":"Pez"},
-            "no": {"Pregunta":"¿Es reptil?",
-                    "si":{ "Respuesta": "Serpiente" },
-                    "no":{"Respuesta":"Gusano"}}}}
+    "Pregunta": "¿Tiene cuatro extremidades? (Alas y aletas cuentan)",
+    "si": {
+        "Pregunta": "¿Camina principalmente?",
+        "si": {
+            "Pregunta": "¿Es mamífero?",
+            "si": {
+                "Pregunta": "¿Es muy grande?",
+                "si": {
+                    "Respuesta": "Elefante"
+                },
+                "no": {
+                    "Respuesta": "Perro"
+                }
+            },
+            "no": {
+                "Respuesta": "Salamandra"
+            }
+        },
+        "no": {
+            "Pregunta": "¿Es mamífero?",
+            "si": {
+                "Respuesta": "Murciélago"
+            },
+            "no": {
+                "Pregunta": "¿Vuela?",
+                "si": {
+                    "Respuesta": "Pájaro"
+                },
+                "no": {
+                    "Respuesta": "Sapo"
+                }
+            }
+        }
+    },
+    "no": {
+        "Pregunta": "¿Es un insecto?",
+        "si": {
+            "Pregunta": "¿Vuela?",
+            "si": {
+                "Respuesta": "Abeja"
+            },
+            "no": {
+                "Respuesta": "Hormiga"
+            }
+        },
+        "no": {
+            "Pregunta": "¿Nada?",
+            "si": {
+                "Pregunta": "¿Es mamífero?",
+                "si": {
+                    "Respuesta": "Delfín"
+                },
+                "no": {
+                    "Respuesta": "Pez"
+                }
+            },
+            "no": {
+                "Pregunta": "¿Es reptil?",
+                "si": {
+                    "Respuesta": "Serpiente"
+                },
+                "no": {
+                    "Respuesta": "Gusano"
+                }
+            }
+        }
+    }
 }
